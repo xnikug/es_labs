@@ -1,9 +1,16 @@
+/**
+ * @file srvSerialStdio.cpp
+ * @brief Implementation of Serial Standard I/O Redirection Service.
+ */
+
 #include "Arduino.h"
 #include "srvSerialStdio.h"
 
+// Stream definitions for stdin and stdout
 static FILE serialOutput = { 0 };
 static FILE serialInput = { 0 };
 
+/* See srvSerialStdio.h for documentation */
 void srvSerialSetup(int baudRate) {
     Serial.begin(baudRate);
     
@@ -16,28 +23,36 @@ void srvSerialSetup(int baudRate) {
     stdin = &serialInput;
 }
 
+/* See srvSerialStdio.h for documentation */
 int srvSerialReadByte(FILE* stream) {
     while (!Serial.available());
     return Serial.read();
 }
 
+/* See srvSerialStdio.h for documentation */
 int srvSerialWriteByte(char c, FILE* stream) {
     Serial.write(c);
     return 0;
 }
 
+/* See srvSerialStdio.h for documentation */
 int srvSerialAvailable() {
     return Serial.available();
 }
 
+/* See srvSerialStdio.h for documentation */
 void srvSerialFlush() {
     Serial.flush();
 }
 
+/* See srvSerialStdio.h for documentation */
 void srvSerialPrintString(const char* str) {
     printf("%s", str);
 }
 
+/**
+ * @brief Consumes remaining line endings (\r or \n) from the buffer.
+ */
 static void consumeLineEndings() {
     delay(10);
     // Swallow any extra line ending characters (\r or \n) that might remain in the buffer
@@ -51,6 +66,7 @@ static void consumeLineEndings() {
     }
 }
 
+/* See srvSerialStdio.h for documentation */
 int srvSerialReadLine(char* buffer, int maxLength) {
     int index = 0;
     

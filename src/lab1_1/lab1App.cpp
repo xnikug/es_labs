@@ -1,3 +1,8 @@
+/**
+ * @file lab1App.cpp
+ * @brief Implementation of the Lab 1.1 Application Logic.
+ */
+
 #include <Arduino.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,16 +11,23 @@
 #include <ddLed.h>
 #include <srvSerialStdio.h>
 
-#define LED_PIN 13
-#define BAUD_RATE 9600
-#define MAX_MESSAGE_LENGTH 10
+#define LED_PIN 13              ///< GPIO pin for the LED
+#define BAUD_RATE 9600          ///< Serial baud rate
+#define MAX_MESSAGE_LENGTH 10   ///< Maximum length of command string
 
+/**
+ * @brief Converts a string to lowercase in place.
+ * @param str The null-terminated string to modify.
+ */
 static void toLowerCase(char* str) {
     for (int i = 0; str[i]; i++) {
         str[i] = (char)tolower((unsigned char)str[i]);
     }
 }
 
+/**
+ * @brief Prints the list of available commands to standard output.
+ */
 static void printHelp() {
     printf("Available commands:\r\n");
     printf("  led on  - Turn LED on\r\n");
@@ -23,6 +35,7 @@ static void printHelp() {
     printf("  help    - Show this help message\r\n\r\n");
 }
 
+/* See lab1App.h for documentation */
 void lab1AppSetup() {
     srvSerialSetup(BAUD_RATE);
     
@@ -38,6 +51,10 @@ void lab1AppSetup() {
     printf("> ");
 }
 
+/**
+ * @brief Executes logic for the 'led' command based on the modifier.
+ * @param modifier The argument provided (e.g., "on" or "off").
+ */
 static void handleLedCommand(const char* modifier) {
     if (strcmp(modifier, "on") == 0) {
         ddLedOn(LED_PIN);
@@ -50,6 +67,10 @@ static void handleLedCommand(const char* modifier) {
     }
 }
 
+/**
+ * @brief Parses and executes a complete command line.
+ * @param line The null-terminated input buffer.
+ */
 static void lab1HandleLine(const char* line) {
     char command[MAX_MESSAGE_LENGTH] = {0};
     char modifier[MAX_MESSAGE_LENGTH] = {0};
@@ -76,6 +97,11 @@ static void lab1HandleLine(const char* line) {
     printf("ERROR: Unknown command '%s'\r\n", command);
 }
 
+/**
+ * @brief Handles 'Enter' key press: executes command and resets buffer.
+ * @param line The command buffer.
+ * @param index Pointer to the current buffer index.
+ */
 static void processNewLine(char* line, size_t* index) {
     if (*index > 0) {
         line[*index] = '\0';
@@ -87,6 +113,10 @@ static void processNewLine(char* line, size_t* index) {
     printf("> ");
 }
 
+/**
+ * @brief Handles 'Backspace' key press: removes character from buffer and terminal.
+ * @param index Pointer to the current buffer index.
+ */
 static void processBackspace(size_t* index) {
     if (*index > 0) {
         (*index)--;
@@ -94,6 +124,12 @@ static void processBackspace(size_t* index) {
     }
 }
 
+/**
+ * @brief Processes a standard character input.
+ * @param c The character received.
+ * @param line The command buffer.
+ * @param index Pointer to the current buffer index.
+ */
 static void processChar(int c, char* line, size_t* index) {
     if (*index < MAX_MESSAGE_LENGTH - 1) {
         line[(*index)++] = (char)c;
@@ -101,6 +137,7 @@ static void processChar(int c, char* line, size_t* index) {
     }
 }
 
+/* See lab1App.h for documentation */
 void lab1AppLoop() {
     static char line[MAX_MESSAGE_LENGTH];
     static size_t index = 0;
