@@ -32,7 +32,9 @@ int srvLcdWriteByte(char c, FILE* stream)
 /* See srvLcdStdio.h for documentation */
 int srvLcdReadByte(FILE* stream)
 {
-    return (int)ddKeyPadGetKey();
+    char key = ddKeyPadGetKey();
+    srvLcdWriteByte(key, stdout);  // echo character to LCD
+    return (int)key;
 }
 
 /* See srvLcdStdio.h for documentation */

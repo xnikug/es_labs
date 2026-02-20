@@ -50,13 +50,8 @@ void lab1_2AppLoop()
 {
     char enteredCode[MAX_CODE_LENGTH + 1];
 
-    // Read one key at a time and echo it to the LCD immediately via putchar
-    for (int i = 0; i < MAX_CODE_LENGTH; i++) {
-        char key = (char)getchar();
-        putchar(key);           // echoes instantly to LCD through stdout
-        enteredCode[i] = key;
-    }
-    enteredCode[MAX_CODE_LENGTH] = '\0';
+    // Read exactly 4 characters from stdin (keypad) via scanf
+    scanf("%4s", enteredCode);
 
     validatePasscode(enteredCode);
 }
