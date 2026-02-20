@@ -8,8 +8,8 @@
 #include <string.h>
 #include <ctype.h>
 #include "lab1App.h"
-#include <ddLed.h>
-#include <srvSerialStdio.h>
+#include "ddLed/ddLed.h"
+#include "srvSerialStdio/srvSerialStdio.h"
 
 #define LED_PIN 13              ///< GPIO pin for the LED
 #define BAUD_RATE 9600          ///< Serial baud rate
