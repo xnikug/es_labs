@@ -8,7 +8,7 @@
 #define LED_RED_PIN      11
 #define LED_GREEN_PIN    12
 #define MAX_CODE_LENGTH  4
-#define VALID_CODE       "708#"
+#define VALID_CODE       "111#"
 #define RESULT_DELAY_MS  2000
 
 static void passcodeInit()

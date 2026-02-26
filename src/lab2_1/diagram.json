@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "author": "Lab 2.1",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-arduino-uno",
+      "id": "uno",
+      "top": -200,
+      "left": -100,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-breadboard",
+      "id": "bb1",
+      "top": 180,
+      "left": -160,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledGreen",
+      "top": 120,
+      "left": -120,
+      "attrs": { "color": "green" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledRed",
+      "top": 120,
+      "left": -50,
+      "attrs": { "color": "red" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledYellow",
+      "top": 120,
+      "left": 20,
+      "attrs": { "color": "yellow" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 250,
+      "left": -110,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": 250,
+      "left": -40,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": 250,
+      "left": 30,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 200,
+      "left": 120,
+      "attrs": { "color": "black" }
+    }
+  ],
+  "connections": [
+    ["uno:GND.1",     "bb1:bn.1",      "black",  ["v20", "h-60"]],
+    ["uno:4",         "ledGreen:A",     "green",  ["v40", "h-30"]],
+    ["ledGreen:C",    "r1:1",           "green",  []],
+    ["r1:2",          "bb1:bn.3",       "black",  []],
+    ["uno:5",         "ledRed:A",       "red",    ["v50", "h-10"]],
+    ["ledRed:C",      "r2:1",           "red",    []],
+    ["r2:2",          "bb1:bn.8",       "black",  []],
+    ["uno:6",         "ledYellow:A",    "orange", ["v60", "h10"]],
+    ["ledYellow:C",   "r3:1",           "orange", []],
+    ["r3:2",          "bb1:bn.13",      "black",  []],
+    ["uno:7",         "btn1:1.l",       "brown",  ["v70", "h40"]],
+    ["btn1:2.l",      "bb1:bn.18",      "black",  []]
+  ],
+  "dependencies": {}
+}

@@ -31,6 +31,9 @@ int srvSerialReadByte(FILE* stream) {
 
 /* See srvSerialStdio.h for documentation */
 int srvSerialWriteByte(char c, FILE* stream) {
+    if (c == '\n') {
+        Serial.write('\r');
+    }
     Serial.write(c);
     return 0;
 }
