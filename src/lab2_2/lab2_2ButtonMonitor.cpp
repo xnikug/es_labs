@@ -17,88 +17,96 @@
 #include <stdio.h>
 
 #define PRESS_SHORT_THRESHOLD_MS    500
-
-// Polling period: 1 tick = 16 ms on Arduino Mega FreeRTOS
 #define POLL_TICKS                  1
-
-// LED on-time duration: 62 ticks * 16 ms = ~992 ms
 #define LED_ON_TICKS                62
 
-/* See lab2_2ButtonMonitor.h for documentation */
+/** @brief Returns true when the button is currently pressed (active LOW). */
+static int isButtonPressed()
+{
+    return (digitalRead(PIN_BUTTON) == LOW);
+}
+
+/**
+ * @brief Activates the indicator LED for the given press duration.
+ * @param pressDuration Duration of the button press in ms.
+ * @return LED type: 1 = green (short), 2 = red (long).
+ */
+static int activateIndicatorLed(int pressDuration)
+{
+    if (pressDuration < PRESS_SHORT_THRESHOLD_MS) {
+        digitalWrite(PIN_LED_RED,   LOW);
+        digitalWrite(PIN_LED_GREEN, HIGH);
+        printf("[T1] SHORT press %d ms - green LED on\n", pressDuration);
+        return 1;
+    } else {
+        digitalWrite(PIN_LED_GREEN, LOW);
+        digitalWrite(PIN_LED_RED,   HIGH);
+        printf("[T1] LONG press %d ms - red LED on\n", pressDuration);
+        return 2;
+    }
+}
+
+/**
+ * @brief Turns off the indicator LED corresponding to the given type.
+ * @param ledType 1 = green, 2 = red.
+ */
+static void deactivateIndicatorLed(int ledType)
+{
+    if (ledType == 1) {
+        digitalWrite(PIN_LED_GREEN, LOW);
+    } else if (ledType == 2) {
+        digitalWrite(PIN_LED_RED, LOW);
+    }
+}
+
 void vTaskButtonMonitor(void *pvParameters)
 {
     (void)pvParameters;
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
-    int button_state = 0;            // 0 = idle, 1 = pressed
-    unsigned long press_start_time = 0;
-    int press_duration = 0;
-
-    // LED on-time counter: -1 = inactive, >=0 = counting down
-    int led_on_counter = -1;
-    int led_type = 0;                // 0 = none, 1 = green (short), 2 = red (long)
+    int buttonState          = 0;     // 0 = idle, 1 = pressed
+    unsigned long pressStartTime = 0;
+    int pressDuration        = 0;
+    int ledOnCounter         = -1;    // -1 = inactive, >=0 = counting down
+    int ledType              = 0;     // 0 = none, 1 = green, 2 = red
 
     printf("[T1] ButtonMonitor started\n");
 
     for (;;) {
-        int button_is_pressed_now = (digitalRead(PIN_BUTTON) == LOW);
+        int pressed = isButtonPressed();
 
-        // State: Idle (button not pressed)
-        if (button_state == 0) {
-            // Transition: button pressed
-            if (button_is_pressed_now) {
-                button_state = 1;
-                press_start_time = millis();
+        // State: Idle
+        if (buttonState == 0) {
+            if (pressed) {
+                buttonState = 1;
+                pressStartTime = millis();
             }
         }
-        // State: Button pressed
-        else if (button_state == 1) {
-            // Transition: button released
-            if (!button_is_pressed_now) {
-                button_state = 0;
-                press_duration = (int)(millis() - press_start_time);
+        // State: Pressed
+        else if (buttonState == 1) {
+            if (!pressed) {
+                buttonState = 0;
+                pressDuration = (int)(millis() - pressStartTime);
 
-                // Store duration in shared variable (mutex-protected)
-                setLastPressDuration(press_duration);
+                setLastPressDuration(pressDuration);
 
-                // Determine LED and start counter
-                if (press_duration < PRESS_SHORT_THRESHOLD_MS) {
-                    // Short press: green LED
-                    digitalWrite(PIN_LED_RED,   LOW);
-                    digitalWrite(PIN_LED_GREEN, HIGH);
-                    led_type = 1;
-                    led_on_counter = LED_ON_TICKS;
-                    printf("[T1] SHORT press %d ms - green LED on\n", press_duration);
-                } else {
-                    // Long press: red LED
-                    digitalWrite(PIN_LED_GREEN, LOW);
-                    digitalWrite(PIN_LED_RED,   HIGH);
-                    led_type = 2;
-                    led_on_counter = LED_ON_TICKS;
-                    printf("[T1] LONG press %d ms - red LED on\n", press_duration);
-                }
+                ledType = activateIndicatorLed(pressDuration);
+                ledOnCounter = LED_ON_TICKS;
             }
         }
 
-        // LED on-time counter logic
-        if (led_on_counter > 0) {
-            led_on_counter--;
-            // Keep LED on (already turned on above)
-        } else if (led_on_counter == 0) {
-            // Counter expired: turn off LED and signal T2
-            if (led_type == 1) {
-                digitalWrite(PIN_LED_GREEN, LOW);
-            } else if (led_type == 2) {
-                digitalWrite(PIN_LED_RED, LOW);
-            }
+        // LED countdown logic
+        if (ledOnCounter > 0) {
+            ledOnCounter--;
+        } else if (ledOnCounter == 0) {
+            deactivateIndicatorLed(ledType);
 
-            // Give semaphore to T2 only AFTER LED is off
             printf("[T1] LED off - giving semaphore to T2\n");
             xSemaphoreGive(xPressSemaphore);
 
-            led_on_counter--; // Decrement to -1 to avoid repeated give
-            led_type = 0;
+            ledOnCounter--;
+            ledType = 0;
         }
 
         vTaskDelayUntil(&xLastWakeTime, POLL_TICKS);

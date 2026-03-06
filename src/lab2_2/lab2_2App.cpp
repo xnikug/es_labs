@@ -24,8 +24,8 @@
  * Hardware (Arduino Mega 2560):
  *   PIN  3 - pushbutton (INPUT_PULLUP, active LOW -> GND)
  *   PIN 12 - green  LED (T1: short press indicator, ~1 s)
- *   PIN 10 - red    LED (T1: long  press indicator, ~1 s)
- *   PIN 11 - yellow LED (T2: blink sequence)
+ *   PIN 11 - red    LED (T1: long  press indicator, ~1 s)
+ *   PIN 10 - yellow LED (T2: blink sequence)
  */
 
 #include "lab2_2App.h"
@@ -46,132 +46,147 @@ static SemaphoreHandle_t xStatsMutex    = NULL;
 
 // Shared variables
 
-static int last_press_duration  = 0;
-static int total_presses        = 0;
-static int short_presses        = 0;
-static int long_presses         = 0;
-static int sum_short_durations  = 0;
-static int sum_long_durations   = 0;
+static int lastPressDuration = 0;
+static int totalPresses      = 0;
+static int shortPresses      = 0;
+static int longPresses       = 0;
+static int sumShortDurations = 0;
+static int sumLongDurations  = 0;
 
 // Duration getters / setters (xDurationMutex)
 
-/* See lab2_2App.h for documentation */
 void setLastPressDuration(int value)
 {
     xSemaphoreTake(xDurationMutex, portMAX_DELAY);
-    last_press_duration = value;
+    lastPressDuration = value;
     xSemaphoreGive(xDurationMutex);
 }
 
-/* See lab2_2App.h for documentation */
 int getLastPressDuration()
 {
     xSemaphoreTake(xDurationMutex, portMAX_DELAY);
-    int val = last_press_duration;
+    int val = lastPressDuration;
     xSemaphoreGive(xDurationMutex);
     return val;
 }
 
 // Statistics getters / setters (xStatsMutex)
 
-/* See lab2_2App.h for documentation */
 void setTotalPresses(int value)
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    total_presses = value;
+    totalPresses = value;
     xSemaphoreGive(xStatsMutex);
 }
 
-/* See lab2_2App.h for documentation */
 int getTotalPresses()
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    int val = total_presses;
+    int val = totalPresses;
     xSemaphoreGive(xStatsMutex);
     return val;
 }
 
-/* See lab2_2App.h for documentation */
 void setShortPresses(int value)
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    short_presses = value;
+    shortPresses = value;
     xSemaphoreGive(xStatsMutex);
 }
 
-/* See lab2_2App.h for documentation */
 int getShortPresses()
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    int val = short_presses;
+    int val = shortPresses;
     xSemaphoreGive(xStatsMutex);
     return val;
 }
 
-/* See lab2_2App.h for documentation */
 void setLongPresses(int value)
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    long_presses = value;
+    longPresses = value;
     xSemaphoreGive(xStatsMutex);
 }
 
-/* See lab2_2App.h for documentation */
 int getLongPresses()
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    int val = long_presses;
+    int val = longPresses;
     xSemaphoreGive(xStatsMutex);
     return val;
 }
 
-/* See lab2_2App.h for documentation */
 void setSumShortDurations(int value)
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    sum_short_durations = value;
+    sumShortDurations = value;
     xSemaphoreGive(xStatsMutex);
 }
 
-/* See lab2_2App.h for documentation */
 int getSumShortDurations()
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    int val = sum_short_durations;
+    int val = sumShortDurations;
     xSemaphoreGive(xStatsMutex);
     return val;
 }
 
-/* See lab2_2App.h for documentation */
 void setSumLongDurations(int value)
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    sum_long_durations = value;
+    sumLongDurations = value;
     xSemaphoreGive(xStatsMutex);
 }
 
-/* See lab2_2App.h for documentation */
 int getSumLongDurations()
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    int val = sum_long_durations;
+    int val = sumLongDurations;
     xSemaphoreGive(xStatsMutex);
     return val;
 }
 
-/* See lab2_2App.h for documentation */
 void resetStatistics()
 {
     xSemaphoreTake(xStatsMutex, portMAX_DELAY);
-    total_presses       = 0;
-    short_presses       = 0;
-    long_presses        = 0;
-    sum_short_durations = 0;
-    sum_long_durations  = 0;
+    totalPresses      = 0;
+    shortPresses      = 0;
+    longPresses       = 0;
+    sumShortDurations = 0;
+    sumLongDurations  = 0;
     xSemaphoreGive(xStatsMutex);
 }
 
-/* See lab2_2App.h for documentation */
+// Setup helpers
+
+static void initGpio()
+{
+    pinMode(PIN_BUTTON,     INPUT_PULLUP);
+    pinMode(PIN_LED_GREEN,  OUTPUT);  digitalWrite(PIN_LED_GREEN,  LOW);
+    pinMode(PIN_LED_RED,    OUTPUT);  digitalWrite(PIN_LED_RED,    LOW);
+    pinMode(PIN_LED_YELLOW, OUTPUT);  digitalWrite(PIN_LED_YELLOW, LOW);
+}
+
+static void initSyncObjects()
+{
+    xPressSemaphore = xSemaphoreCreateBinary();
+    xDurationMutex  = xSemaphoreCreateMutex();
+    xStatsMutex     = xSemaphoreCreateMutex();
+
+    if (xPressSemaphore == NULL || xDurationMutex == NULL || xStatsMutex == NULL) {
+        printf("FATAL: Failed to create FreeRTOS objects!\n");
+        for (;;);
+    }
+}
+
+static void createTasks()
+{
+    xTaskCreate(vTaskButtonMonitor, "ButtonMonitor",  500, NULL, 3, NULL);
+    xTaskCreate(vTaskPressHandler,  "PressHandler",   500, NULL, 2, NULL);
+    xTaskCreate(vTaskReporter,      "Reporter",       500, NULL, 1, NULL);
+}
+
 void lab2_2AppSetup()
 {
     srvSerialSetup(9600);
@@ -189,31 +204,11 @@ void lab2_2AppSetup()
     printf("  T3 Reporter       10 s period     (xTaskDelayUntil, prio 1)\n");
     printf("Press the button to start!\n\n");
 
-    // GPIO setup
-    pinMode(PIN_BUTTON,     INPUT_PULLUP);
-    pinMode(PIN_LED_GREEN,  OUTPUT);  digitalWrite(PIN_LED_GREEN,  LOW);
-    pinMode(PIN_LED_RED,    OUTPUT);  digitalWrite(PIN_LED_RED,    LOW);
-    pinMode(PIN_LED_YELLOW, OUTPUT);  digitalWrite(PIN_LED_YELLOW, LOW);
-
-    // Create synchronisation objects
-    xPressSemaphore = xSemaphoreCreateBinary();
-    xDurationMutex  = xSemaphoreCreateMutex();
-    xStatsMutex     = xSemaphoreCreateMutex();
-
-    if (xPressSemaphore == NULL || xDurationMutex == NULL || xStatsMutex == NULL) {
-        printf("FATAL: Failed to create FreeRTOS objects!\n");
-        for (;;); /* halt */
-    }
-
-    // Create FreeRTOS tasks
-    xTaskCreate(vTaskButtonMonitor, "ButtonMonitor",  500, NULL, 3, NULL);
-    xTaskCreate(vTaskPressHandler,  "PressHandler",   500, NULL, 2, NULL);
-    xTaskCreate(vTaskReporter,      "Reporter",       500, NULL, 1, NULL);
-
-    // The FreeRTOS scheduler starts automatically after setup() returns.
+    initGpio();
+    initSyncObjects();
+    createTasks();
 }
 
-/* See lab2_2App.h for documentation */
 void lab2_2AppLoop()
 {
     // Intentionally empty - the FreeRTOS scheduler owns the CPU.

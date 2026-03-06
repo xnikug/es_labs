@@ -15,10 +15,44 @@
 #include <Arduino.h>
 #include <stdio.h>
 
-// Report period: 10 seconds
 #define REPORT_PERIOD_TICKS  (10000 / portTICK_PERIOD_MS)
 
-/* See lab2_2Reporter.h for documentation */
+/**
+ * @brief Returns the average duration; 0 when count is zero.
+ * @param sumDurations Total cumulative duration in ms.
+ * @param count Number of presses.
+ */
+static int computeAverage(int sumDurations, int count)
+{
+    if (count > 0) {
+        return sumDurations / count;
+    }
+    return 0;
+}
+
+/**
+ * @brief Reads all statistics, prints them, and resets counters.
+ */
+static void printAndResetReport()
+{
+    int tp  = getTotalPresses();
+    int sp  = getShortPresses();
+    int lp  = getLongPresses();
+    int ssd = getSumShortDurations();
+    int sld = getSumLongDurations();
+
+    int avgDuration = computeAverage(ssd + sld, tp);
+
+    printf("\n========== TASK 3: PERIODIC REPORT (10s) ==========\n");
+    printf("Total presses:      %d\n", tp);
+    printf("Short presses:      %d (total duration: %d ms)\n", sp, ssd);
+    printf("Long presses:       %d (total duration: %d ms)\n", lp, sld);
+    printf("Average duration:   %d ms\n", avgDuration);
+    printf("====================================================\n\n");
+
+    resetStatistics();
+}
+
 void vTaskReporter(void *pvParameters)
 {
     (void)pvParameters;
@@ -29,28 +63,6 @@ void vTaskReporter(void *pvParameters)
 
     for (;;) {
         vTaskDelayUntil(&xLastWakeTime, REPORT_PERIOD_TICKS);
-
-        // Read statistics (mutex-protected)
-        int tp  = getTotalPresses();
-        int sp  = getShortPresses();
-        int lp  = getLongPresses();
-        int ssd = getSumShortDurations();
-        int sld = getSumLongDurations();
-
-        // Calculate average duration
-        int avg_duration = 0;
-        if (tp > 0) {
-            avg_duration = (ssd + sld) / tp;
-        }
-
-        printf("\n========== TASK 3: PERIODIC REPORT (10s) ==========\n");
-        printf("Total presses:      %d\n", tp);
-        printf("Short presses:      %d (total duration: %d ms)\n", sp, ssd);
-        printf("Long presses:       %d (total duration: %d ms)\n", lp, sld);
-        printf("Average duration:   %d ms\n", avg_duration);
-        printf("====================================================\n\n");
-
-        // Reset statistics (mutex-protected)
-        resetStatistics();
+        printAndResetReport();
     }
 }

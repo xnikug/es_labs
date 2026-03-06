@@ -13,12 +13,12 @@
  * Hardware (Arduino Mega 2560):
  *   PIN  3 - pushbutton (INPUT_PULLUP, active LOW)
  *   PIN 12 - green  LED (T1: short press indicator, ~1 s)
- *   PIN 10 - red    LED (T1: long  press indicator, ~1 s)
- *   PIN 11 - yellow LED (T2: blink 5x short / 10x long)
+ *   PIN 11 - red    LED (T1: long  press indicator, ~1 s)
+ *   PIN 10 - yellow LED (T2: blink 5x short / 10x long)
  *
  * Synchronisation:
  *   xPressSemaphore - binary semaphore, T1 gives after LED expires, T2 takes
- *   xDurationMutex  - guards last_press_duration (T1 writes, T2 reads)
+ *   xDurationMutex  - guards lastPressDuration (T1 writes, T2 reads)
  *   xStatsMutex     - guards statistics counters (T2 writes, T3 reads/resets)
  *
  * stdout - UART via srvSerialStdio (9600 baud).
