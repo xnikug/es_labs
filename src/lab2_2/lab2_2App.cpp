@@ -1,29 +1,29 @@
-/**
+﻿/**
  * @file lab2_2App.cpp
- * @brief Lab 2.2 – FreeRTOS Preemptive OS (Arduino Mega 2560).
+ * @brief Lab 2.2 - FreeRTOS Button Statistics (Arduino Mega 2560).
  *
  * Three concurrent FreeRTOS tasks:
  *
- *  T1 – vTaskButtonLed  (10 ms recurrence, xTaskDelayUntil)
- *       Polls button; on press lights green LED for 1 s and gives the
- *       binary semaphore xButtonSemaphore.
+ *  T1 - vTaskButtonLed   (1 tick poll, xTaskDelayUntil)
+ *       Polls button; on release computes press duration, lights the green
+ *       LED (~1 s) for short presses (<500 ms) or the red LED for long
+ *       presses (>=500 ms) using a tick countdown, then gives
+ *       xSemaphoreButtonPress to T2.
  *
- *  T2 – vTaskSync       (semaphore-driven, 50 ms internal delay)
- *       Waits for xButtonSemaphore, increments global N, enqueues N bytes
- *       (1 … N) followed by a 0-terminator into xDataQueue using
- *       xQueueSendToFront(), then blinks the red LED N times
- *       (300 ms ON / 500 ms OFF).
+ *  T2 - vTaskStatsYellow (semaphore-driven)
+ *       Takes xSemaphoreButtonPress, updates press-duration statistics,
+ *       then blinks the yellow LED 5x (short) or 10x (long) at
+ *       100 ms ON / 100 ms OFF.
  *
- *  T3 – vTaskAsync      (200 ms recurrence)
- *       Drains xDataQueue with xQueueReceive(); prints each byte and starts
- *       a new line on every 0-terminator.  Also blinks the yellow LED once
- *       per read cycle that contains data.
+ *  T3 - vTaskReport      (10 s recurrence, xTaskDelayUntil)
+ *       Prints total/short/long press counts and average duration to STDIO,
+ *       then resets all counters.
  *
  * Hardware (Arduino Mega 2560):
- *   PIN  3 – pushbutton (INPUT_PULLUP, active LOW → GND)
- *   PIN 12 – green  LED  (T1 indicator)
- *   PIN 11 – red    LED  (T2 blink sequence)
- *   PIN 10 – yellow LED  (T3 RX activity)
+ *   PIN  3 - pushbutton (INPUT_PULLUP, active LOW -> GND)
+ *   PIN 12 - green  LED (T1: short press indicator, ~1 s)
+ *   PIN 10 - red    LED (T1: long  press indicator, ~1 s)
+ *   PIN 11 - yellow LED (T2: blink sequence)
  */
 
 #include "lab2_2App.h"
@@ -31,205 +31,260 @@
 #include <Arduino.h>
 #include <Arduino_FreeRTOS.h>
 #include <semphr.h>
-#include <queue.h>
 #include <stdio.h>
 
 // ---------------------------------------------------------------------------
 // Pin definitions
 // ---------------------------------------------------------------------------
 
-#define PIN_BUTTON      3   /**< Pushbutton: INPUT_PULLUP, active LOW.          */
-#define PIN_LED_GREEN   12  /**< T1 indicator – on 1 s after button press.      */
-#define PIN_LED_RED     11  /**< T2 indicator – blinks N times after semaphore. */
-#define PIN_LED_YELLOW  10  /**< T3 indicator – blinks on each non-empty drain. */
+#define PIN_BUTTON      3   /**< Pushbutton: INPUT_PULLUP, active LOW.              */
+#define PIN_LED_GREEN   12  /**< T1 indicator - on ~1 s for short press (<500 ms).  */
+#define PIN_LED_RED     10  /**< T1 indicator - on ~1 s for long  press (>=500 ms). */
+#define PIN_LED_YELLOW  11  /**< T2 indicator - blinks 5x short / 10x long press.  */
 
 // ---------------------------------------------------------------------------
 // FreeRTOS timing constants
 // ---------------------------------------------------------------------------
 
-/** T1 recurrence: 10 ms */
-#define T1_PERIOD_MS        10
-/** T2 startup delay before queue-fill + blink loop (ms). */
-#define T2_PRE_DELAY_MS     50
-/** T2 red LED ON time per blink (ms). */
-#define T2_BLINK_ON_MS      300
-/** T2 red LED OFF time per blink (ms). */
-#define T2_BLINK_OFF_MS     500
-/** T3 poll period (ms). */
-#define T3_PERIOD_MS        200
-/** Green LED on-time after button press (ms). */
-#define BTN_LED_ON_MS       1000
-/** Maximum bytes storable in xDataQueue. */
-#define QUEUE_SIZE          128
+/** Press duration threshold separating short from long presses (ms). */
+#define PRESS_SHORT_THRESHOLD   500
+
+// Polling period: 1 tick = 16 ms on Arduino Mega FreeRTOS
+#define TASK_1_POLL_TICKS       1
+
+// LED on-time duration (in ticks): 62 ticks * 16 ms = ~992 ms
+#define LED_ON_TIME_TICKS       62
+
+/** Number of yellow blinks for a short press. */
+#define SHORT_BLINKS            5
+/** Number of yellow blinks for a long press. */
+#define LONG_BLINKS             10
+
+// Blink half-cycle: 100 ms ON, 100 ms OFF
+#define BLINK_HALF_CYCLE_TICKS  (100 / portTICK_PERIOD_MS)
+
+// Report period: 10 seconds
+#define REPORT_PERIOD_TICKS     (10000 / portTICK_PERIOD_MS)
 
 // ---------------------------------------------------------------------------
 // FreeRTOS synchronisation objects (module-scope)
 // ---------------------------------------------------------------------------
 
-static SemaphoreHandle_t xButtonSemaphore = NULL;
-static QueueHandle_t     xDataQueue       = NULL;
+/** Binary semaphore: T1 gives after LED expires, T2 takes. */
+static SemaphoreHandle_t xSemaphoreButtonPress = NULL;
+/** Mutex protecting last_press_duration (T1 writes, T2 reads). */
+static SemaphoreHandle_t xMutexDuration        = NULL;
+/** Mutex protecting statistics counters (T2 writes, T3 reads/resets). */
+static SemaphoreHandle_t xMutexStats           = NULL;
 
 // ---------------------------------------------------------------------------
 // Shared state
 // ---------------------------------------------------------------------------
 
-/** Monotonically increasing press counter; used as byte-sequence length. */
-static volatile int N = 0;
+static int last_press_duration  = 0;
+static int total_presses        = 0;
+static int short_presses        = 0;
+static int long_presses         = 0;
+static int sum_short_durations  = 0;
+static int sum_long_durations   = 0;
 
 // ---------------------------------------------------------------------------
 // Task implementations
 // ---------------------------------------------------------------------------
 
 /**
- * @brief T1 – Button LED task (recurrence 10 ms, xTaskDelayUntil).
+ * @brief T1 - Button LED task (1 tick poll, xTaskDelayUntil).
  *
- * On every rising edge (press detected) the green LED turns on for 1 s and
- * xButtonSemaphore is given to T2.  xTaskDelayUntil ensures a precise 10 ms
- * period regardless of execution time.
+ * Monitors button state using a 2-state machine, measures press duration,
+ * lights green (short) or red (long) LED using a tick countdown (LED_ON_TIME_TICKS),
+ * then gives xSemaphoreButtonPress to T2 after the LED turns off.
  */
 static void vTaskButtonLed(void *pvParameters)
 {
     (void)pvParameters;
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xPeriod  = pdMS_TO_TICKS(T1_PERIOD_MS);
 
-    bool lastState = false; /* previous debounced state */
+    int button_state = 0;            // 0 = not pressed, 1 = pressed
+    unsigned long press_start_time = 0;
+    int press_duration = 0;
 
-    printf("[T1] ButtonLed started – period=%d ms\n", T1_PERIOD_MS);
+    // LED on-time counter: -1 = inactive, >=0 = counting down
+    int led_on_counter = -1;
+    int led_type = 0;                // 0 = none, 1 = green (short), 2 = red (long)
+
+    printf("[T1] ButtonLed started\n");
 
     for (;;) {
-        bool pressed = (digitalRead(PIN_BUTTON) == LOW);
+        int button_is_pressed_now = (digitalRead(PIN_BUTTON) == LOW);
 
-        /* Rising-edge detection (LOW → first LOW after HIGH) */
-        if (pressed && !lastState) {
-            printf("[T1] Button pressed – lighting green LED, giving semaphore\n");
+        // State: Idle (button not pressed)
+        if (button_state == 0) {
+            // Transition: button pressed
+            if (button_is_pressed_now) {
+                button_state = 1;
+                press_start_time = millis();
+            }
+        }
+        // State: Button pressed
+        else if (button_state == 1) {
+            // Transition: button released
+            if (!button_is_pressed_now) {
+                button_state = 0;
+                press_duration = (int)(millis() - press_start_time);
 
-            /* Light green LED */
-            digitalWrite(PIN_LED_GREEN, HIGH);
+                // Store duration in shared variable (mutex-protected)
+                xSemaphoreTake(xMutexDuration, portMAX_DELAY);
+                last_press_duration = press_duration;
+                xSemaphoreGive(xMutexDuration);
 
-            /* Signal T2 */
-            xSemaphoreGive(xButtonSemaphore);
-
-            /* Keep LED on for 1 s within this task */
-            vTaskDelay(pdMS_TO_TICKS(BTN_LED_ON_MS));
-
-            digitalWrite(PIN_LED_GREEN, LOW);
+                // Determine LED and start counter
+                if (press_duration < PRESS_SHORT_THRESHOLD) {
+                    // Short press: green LED
+                    digitalWrite(PIN_LED_RED,   LOW);
+                    digitalWrite(PIN_LED_GREEN, HIGH);
+                    led_type = 1;
+                    led_on_counter = LED_ON_TIME_TICKS;
+                    printf("[T1] SHORT press %d ms - green LED on\n", press_duration);
+                } else {
+                    // Long press: red LED
+                    digitalWrite(PIN_LED_GREEN, LOW);
+                    digitalWrite(PIN_LED_RED,   HIGH);
+                    led_type = 2;
+                    led_on_counter = LED_ON_TIME_TICKS;
+                    printf("[T1] LONG press %d ms - red LED on\n", press_duration);
+                }
+            }
         }
 
-        lastState = pressed;
+        // LED on-time counter logic
+        if (led_on_counter > 0) {
+            led_on_counter--;
+            // Keep LED on (already turned on above)
+        } else if (led_on_counter == 0) {
+            // Counter expired: turn off LED and signal T2
+            if (led_type == 1) {
+                digitalWrite(PIN_LED_GREEN, LOW);
+            } else if (led_type == 2) {
+                digitalWrite(PIN_LED_RED, LOW);
+            }
 
-        /* Precise 10 ms tick – accounts for execution time above */
-        xTaskDelayUntil(&xLastWakeTime, xPeriod);
+            // Give semaphore to T2 only AFTER LED is off
+            printf("[T1] LED off - giving semaphore to T2\n");
+            xSemaphoreGive(xSemaphoreButtonPress);
+
+            led_on_counter--; // Decrement to -1 to avoid repeated give
+            led_type = 0;
+        }
+
+        vTaskDelayUntil(&xLastWakeTime, TASK_1_POLL_TICKS);
     }
 }
 
 /**
- * @brief T2 – Synchronous task (event-driven via semaphore).
+ * @brief T2 - Statistics & yellow blink task (semaphore-driven).
  *
- * Waits indefinitely for xButtonSemaphore:
- *  1. Increments N.
- *  2. Enqueues bytes N, N-1 … 1 (all via xQueueSendToFront), then enqueues
- *     a 0-terminator also via xQueueSendToFront.  Reading T3 will therefore
- *     dequeue in the order: 0, 1, 2 … N (ascending, newline-first).
- *  3. Delays T2_PRE_DELAY_MS (50 ms) to let T3 start reading.
- *  4. Blinks red LED N times (300 ms ON / 500 ms OFF).
+ * Blocks on xSemaphoreButtonPress; on wake reads the press duration, updates
+ * all statistics counters (mutex-protected), then blinks the yellow LED
+ * SHORT_BLINKS or LONG_BLINKS times.
  */
-static void vTaskSync(void *pvParameters)
+static void vTaskStatsYellow(void *pvParameters)
 {
     (void)pvParameters;
 
-    printf("[T2] Sync task started – waiting for semaphore\n");
+    printf("[T2] StatsYellow started - waiting for semaphore\n");
 
     for (;;) {
-        /* Block until T1 signals a button press */
-        if (xSemaphoreTake(xButtonSemaphore, portMAX_DELAY) == pdTRUE) {
+        // Block until T1 signals a completed button press
+        if (xSemaphoreTake(xSemaphoreButtonPress, portMAX_DELAY) == pdTRUE) {
 
-            N++; /* increment shared counter */
+            // Read press duration (mutex-protected)
+            xSemaphoreTake(xMutexDuration, portMAX_DELAY);
+            int duration = last_press_duration;
+            xSemaphoreGive(xMutexDuration);
 
-            printf("[T2] Semaphore received – N=%d, queuing %d bytes\n", N, N);
+            int blinks;
 
-            /*
-             * Enqueue bytes using xQueueSendToFront in reverse order
-             * (N, N-1 … 1) so they sit in the queue as [1, 2 … N].
-             * Finally push the 0-terminator to the very front so the
-             * full queue reads [0, 1, 2 … N].
-             */
-            for (int i = N; i >= 1; i--) {
-                uint8_t byte = (uint8_t)i;
-                if (xQueueSendToFront(xDataQueue, &byte,
-                                      pdMS_TO_TICKS(10)) != pdTRUE) {
-                    printf("[T2] WARNING: queue full, dropped byte %d\n", i);
-                }
+            // Update statistics based on press duration (mutex-protected)
+            xSemaphoreTake(xMutexStats, portMAX_DELAY);
+            total_presses++;
+            if (duration < PRESS_SHORT_THRESHOLD) {
+                // Short press
+                short_presses++;
+                sum_short_durations += duration;
+                blinks = SHORT_BLINKS;
+            } else {
+                // Long press
+                long_presses++;
+                sum_long_durations += duration;
+                blinks = LONG_BLINKS;
             }
-            /* 0-terminator goes to the very front */
-            uint8_t terminator = 0;
-            xQueueSendToFront(xDataQueue, &terminator, pdMS_TO_TICKS(10));
+            xSemaphoreGive(xMutexStats);
 
-            /* Brief pause before blink sequence */
-            vTaskDelay(pdMS_TO_TICKS(T2_PRE_DELAY_MS));
+            printf("[T2] %s press %d ms - total=%d, blinking %d times\n",
+                   (duration < PRESS_SHORT_THRESHOLD) ? "SHORT" : "LONG",
+                   duration, total_presses, blinks);
 
-            /* Blink red LED N times */
-            printf("[T2] Blinking red LED %d time(s)\n", N);
-            for (int i = 0; i < N; i++) {
-                digitalWrite(PIN_LED_RED, HIGH);
-                vTaskDelay(pdMS_TO_TICKS(T2_BLINK_ON_MS));
-                digitalWrite(PIN_LED_RED, LOW);
-                vTaskDelay(pdMS_TO_TICKS(T2_BLINK_OFF_MS));
+            // Blink yellow LED
+            for (int i = 0; i < blinks; i++) {
+                digitalWrite(PIN_LED_YELLOW, HIGH);
+                vTaskDelay(BLINK_HALF_CYCLE_TICKS);
+                digitalWrite(PIN_LED_YELLOW, LOW);
+                vTaskDelay(BLINK_HALF_CYCLE_TICKS);
             }
-            printf("[T2] Blink sequence done\n");
+
+            printf("[T2] Yellow blink sequence done\n");
         }
     }
 }
 
 /**
- * @brief T3 – Asynchronous task (polls queue every 200 ms).
+ * @brief T3 - Periodic statistics report task (10 s recurrence, xTaskDelayUntil).
  *
- * Drains xDataQueue with xQueueReceive().  Each byte is printed as a
- * decimal value.  A 0-byte causes a line break.  A yellow LED blinks once
- * per non-empty drain cycle to give visual feedback on the board.
+ * Every REPORT_PERIOD_TICKS prints total/short/long press counts and average
+ * press duration to STDIO, then resets all counters.
  */
-static void vTaskAsync(void *pvParameters)
+static void vTaskReport(void *pvParameters)
 {
     (void)pvParameters;
 
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xPeriod  = pdMS_TO_TICKS(T3_PERIOD_MS);
 
-    printf("[T3] Async task started – polling queue every %d ms\n",
-           T3_PERIOD_MS);
+    printf("[T3] Report started - period=10000 ms\n");
 
     for (;;) {
-        uint8_t byte;
-        bool    hadData = false;
+        vTaskDelayUntil(&xLastWakeTime, REPORT_PERIOD_TICKS);
 
-        /* Drain all available bytes in the queue this cycle */
-        while (xQueueReceive(xDataQueue, &byte, 0) == pdTRUE) {
-            if (!hadData) {
-                /* First byte of a new batch – print header */
-                printf("[T3] Received: ");
-                hadData = true;
-            }
+        // Read statistics (mutex-protected)
+        xSemaphoreTake(xMutexStats, portMAX_DELAY);
+        int tp  = total_presses;
+        int sp  = short_presses;
+        int lp  = long_presses;
+        int ssd = sum_short_durations;
+        int sld = sum_long_durations;
+        xSemaphoreGive(xMutexStats);
 
-            if (byte == 0) {
-                /* 0-terminator → new line */
-                printf("\n[T3] ------- (N=%d) -------\n", N);
-            } else {
-                printf("%3d", (int)byte);
-            }
+        // Calculate average duration
+        int avg_duration = 0;
+        if (tp > 0) {
+            avg_duration = (ssd + sld) / tp;
         }
 
-        if (hadData) {
-            /* End of this batch */
-            printf("\n");
+        printf("\n========== TASK 3: PERIODIC REPORT (10s) ==========\n");
+        printf("Total presses:      %d\n", tp);
+        printf("Short presses:      %d (total duration: %d ms)\n", sp, ssd);
+        printf("Long presses:       %d (total duration: %d ms)\n", lp, sld);
+        printf("Average duration:   %d ms\n", avg_duration);
+        printf("====================================================\n\n");
 
-            /* Blink yellow LED once as RX-activity indicator */
-            digitalWrite(PIN_LED_YELLOW, HIGH);
-            vTaskDelay(pdMS_TO_TICKS(100));
-            digitalWrite(PIN_LED_YELLOW, LOW);
-        }
-
-        xTaskDelayUntil(&xLastWakeTime, xPeriod);
+        // Reset statistics (mutex-protected)
+        xSemaphoreTake(xMutexStats, portMAX_DELAY);
+        total_presses       = 0;
+        short_presses       = 0;
+        long_presses        = 0;
+        sum_short_durations = 0;
+        sum_long_durations  = 0;
+        xSemaphoreGive(xMutexStats);
     }
 }
 
@@ -242,16 +297,19 @@ void lab2_2AppSetup()
 {
     /* --- Serial STDIO ---------------------------------------------------- */
     srvSerialSetup(9600);
+
     printf("============================================\n");
-    printf(" Lab 2.2 – FreeRTOS Preemptive Scheduler\n");
+    printf(" Lab 2.2 - FreeRTOS Button Statistics\n");
     printf("============================================\n");
     printf("HW: Arduino Mega 2560\n");
     printf("PIN_BUTTON=%d  LED_G=%d  LED_R=%d  LED_Y=%d\n",
            PIN_BUTTON, PIN_LED_GREEN, PIN_LED_RED, PIN_LED_YELLOW);
+    printf("Tick period: %u ms\n", portTICK_PERIOD_MS);
     printf("Tasks:\n");
-    printf("  T1 ButtonLed  period=%d ms  (xTaskDelayUntil)\n", T1_PERIOD_MS);
-    printf("  T2 Sync       event-driven  (xSemaphoreTake)\n");
-    printf("  T3 Async      period=%d ms  (xTaskDelayUntil)\n", T3_PERIOD_MS);
+    printf("  T1 ButtonLed   1 tick poll     (xTaskDelayUntil, prio 3)\n");
+    printf("  T2 StatsYellow event-driven    (xSemaphoreTake,  prio 2)\n");
+    printf("  T3 Report      10 s period     (xTaskDelayUntil, prio 1)\n");
+    printf("Short press threshold: %d ms\n", PRESS_SHORT_THRESHOLD);
     printf("Press the button to start!\n\n");
 
     /* --- GPIO ------------------------------------------------------------ */
@@ -261,24 +319,24 @@ void lab2_2AppSetup()
     pinMode(PIN_LED_YELLOW, OUTPUT);  digitalWrite(PIN_LED_YELLOW, LOW);
 
     /* --- FreeRTOS objects ------------------------------------------------ */
-    xButtonSemaphore = xSemaphoreCreateBinary();
-    xDataQueue       = xQueueCreate(QUEUE_SIZE, sizeof(uint8_t));
+    xSemaphoreButtonPress = xSemaphoreCreateBinary();
+    xMutexDuration        = xSemaphoreCreateMutex();
+    xMutexStats           = xSemaphoreCreateMutex();
 
-    if (xButtonSemaphore == NULL || xDataQueue == NULL) {
+    if (xSemaphoreButtonPress == NULL || xMutexDuration == NULL || xMutexStats == NULL) {
         printf("FATAL: Failed to create FreeRTOS objects!\n");
         for (;;); /* halt */
     }
 
     /* --- Create tasks ----------------------------------------------------- */
     /*
-     * Stack sizes are intentionally generous for AVR; reduce if RAM is tight.
      * Priority order: T1 highest (hard real-time button sampling),
-     *                 T2 medium  (event processing),
-     *                 T3 lowest  (display/logging).
+     *                 T2 medium  (event processing & LED blink),
+     *                 T3 lowest  (periodic reporting / logging).
      */
-    xTaskCreate(vTaskButtonLed, "T1_BtnLed", 256, NULL, 3, NULL);
-    xTaskCreate(vTaskSync,      "T2_Sync",   384, NULL, 2, NULL);
-    xTaskCreate(vTaskAsync,     "T3_Async",  384, NULL, 1, NULL);
+    xTaskCreate(vTaskButtonLed,   "T1_BtnLed",  500, NULL, 3, NULL);
+    xTaskCreate(vTaskStatsYellow, "T2_Stats",   500, NULL, 2, NULL);
+    xTaskCreate(vTaskReport,      "T3_Report",  500, NULL, 1, NULL);
 
     /* The FreeRTOS scheduler starts automatically after setup() returns. */
 }
@@ -286,5 +344,5 @@ void lab2_2AppSetup()
 /* See lab2_2App.h for documentation */
 void lab2_2AppLoop()
 {
-    /* Intentionally empty – the FreeRTOS scheduler owns the CPU. */
+    /* Intentionally empty - the FreeRTOS scheduler owns the CPU. */
 }

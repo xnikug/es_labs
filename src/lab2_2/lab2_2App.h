@@ -1,24 +1,25 @@
 /**
  * @file lab2_2App.h
- * @brief Application interface for Lab 2.2 – FreeRTOS Preemptive OS.
+ * @brief Application interface for Lab 2.2 – FreeRTOS Button Statistics.
  *
  * Runs 3 concurrent FreeRTOS tasks on an Arduino Mega 2560:
  *
- * | Task | Function         | Period   | Sync           | Role                             |
- * |------|------------------|----------|----------------|----------------------------------|
- * | T1   | vTaskButtonLed   | 10 ms    | –              | Detects button press, gives sem  |
- * | T2   | vTaskSync        | event    | xSemaphoreTake | Increments N, fills queue, blinks|
- * | T3   | vTaskAsync       | 200 ms   | –              | Drains queue, prints to STDIO    |
+ * | Task | Function         | Period       | Sync              | Role                                   |
+ * |------|------------------|--------------|-------------------|----------------------------------------|
+ * | T1   | vTaskButtonLed   | 10 ms poll   | –                 | Measures press duration, lights LED    |
+ * | T2   | vTaskStatsYellow | event-driven | xSemaphoreTake    | Updates statistics, blinks yellow LED  |
+ * | T3   | vTaskReport      | 10 s         | –                 | Prints stats to STDIO, resets counters |
  *
- * Hardware (Arduino Mega):
- *   PIN 3  – pushbutton (INPUT_PULLUP, active LOW)
- *   PIN 12 – green  LED (Task 1 indicator, on for 1 s per press)
- *   PIN 11 – red    LED (Task 2 blink: N times, 300 ms ON / 500 ms OFF)
- *   PIN 10 – yellow LED (Task 3 RX activity blink)
+ * Hardware (Arduino Mega 2560):
+ *   PIN  3 – pushbutton (INPUT_PULLUP, active LOW)
+ *   PIN 12 – green  LED (T1: short press indicator, ~1 s)
+ *   PIN 10 – red    LED (T1: long  press indicator, ~1 s)
+ *   PIN 11 – yellow LED (T2: blink 5× short / 10× long)
  *
  * Synchronisation:
- *   xButtonSemaphore – binary sempahore, T1 gives, T2 takes
- *   xDataQueue       – byte queue (capacity QUEUE_SIZE), T2 fills, T3 drains
+ *   xButtonSemaphore – binary semaphore, T1 gives after LED expires, T2 takes
+ *   xMutexDuration   – guards last_press_duration (T1 writes, T2 reads)
+ *   xMutexStats      – guards statistics counters  (T2 writes, T3 reads/resets)
  *
  * stdout → UART via srvSerialStdio (9600 baud).
  */
