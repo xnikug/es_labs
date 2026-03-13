@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "author": "wokwi",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-breadboard-half", "id": "bb2", "top": -185.4, "left": 454, "attrs": {} },
+    { "type": "wokwi-arduino-mega", "id": "mega", "top": -441, "left": 476.4, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": -298.9, "left": 374.2, "attrs": {} },
+    { "type": "wokwi-ds18b20", "id": "temp1", "top": -116.33, "left": 580.08, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": -34.15,
+      "left": 593.8,
+      "rotate": 180,
+      "attrs": { "value": "4700" }
+    },
+    {
+      "type": "wokwi-lcd1602",
+      "id": "lcd1",
+      "top": -185.6,
+      "left": 908,
+      "attrs": { "pins": "i2c" }
+    }
+  ],
+  "connections": [
+    [ "mega:5V", "bb2:tp.15", "red", [ "v0" ] ],
+    [ "mega:GND.2", "bb2:tn.15", "black", [ "v0" ] ],
+    [ "lcd1:GND", "bb2:tn.14", "black", [ "h0" ] ],
+    [ "lcd1:VCC", "bb2:tp.14", "red", [ "v-57.5", "h-212.8" ] ],
+    [ "lcd1:SDA", "mega:20", "green", [ "h-28.8", "v-326.2", "h-78.8" ] ],
+    [ "lcd1:SCL", "mega:21", "green", [ "h-38.4", "v-326.1", "h-59.7" ] ],
+    [ "pot1:GND", "bb2:tn.13", "black", [ "v76.8", "h219.2" ] ],
+    [ "pot1:VCC", "bb2:tp.13", "red", [ "v28.8", "h199.2" ] ],
+    [ "mega:A0", "pot1:SIG", "green", [ "v45.3", "h-271.7" ] ],
+    [ "bb2:tp.12", "bb2:14b.g", "red", [ "v0" ] ],
+    [ "bb2:tn.11", "bb2:12b.g", "black", [ "h-27.2", "v105.5" ] ],
+    [ "temp1:GND", "bb2:12b.f", "", [ "$bb" ] ],
+    [ "temp1:DQ", "bb2:13b.f", "", [ "$bb" ] ],
+    [ "temp1:VCC", "bb2:14b.f", "", [ "$bb" ] ],
+    [ "bb2:13b.g", "mega:5", "green", [ "v9.6", "h-249.6", "v-403.2", "h340.3" ] ],
+    [ "bb2:19b.i", "bb2:14b.i", "red", [ "v0" ] ],
+    [ "r1:1", "bb2:19b.j", "", [ "$bb" ] ],
+    [ "r1:2", "bb2:13b.j", "", [ "$bb" ] ]
+  ],
+  "dependencies": {}
+}

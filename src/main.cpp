@@ -3,13 +3,15 @@
 #include "lab1_2/lab1_2App.h"
 #include "lab2_1/lab2_1App.h"
 #include "lab2_2/lab2_2App.h"
+#include "lab3_1/lab3_1App.h"
 
 // Lab selection
 #define LAB_1_1 1
 #define LAB_1_2 2
 #define LAB_2_1 3
 #define LAB_2_2 4
-#define APP_NAME LAB_2_2
+#define LAB_3_1 5
+#define APP_NAME LAB_3_1
 
 void setup() {
   #if APP_NAME == LAB_1_1
@@ -20,6 +22,8 @@ void setup() {
     lab2_1AppSetup();
   #elif APP_NAME == LAB_2_2
     lab2_2AppSetup();
+  #elif APP_NAME == LAB_3_1
+    lab3_1AppSetup();
   #endif
 }
 
@@ -32,5 +36,7 @@ void loop() {
     lab2_1AppLoop();
   #elif APP_NAME == LAB_2_2
     lab2_2AppLoop();
+  #elif APP_NAME == LAB_3_1
+    lab3_1AppLoop();
   #endif
 }
