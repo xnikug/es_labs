@@ -24,12 +24,12 @@ static void renderLcdLines(const SensorReadings_t &sample, char *line0, size_t l
         fracPart = -fracPart;
     }
 
-    snprintf(line0, line0Size, "T:%d.%02d A:%+3d", intPart, fracPart, centeredAngle);
+    snprintf(line0, line0Size, "A:%+3d   D:%d", centeredAngle, sample.angleDebounceCounter);
 
     if (sample.angleAlertState == LAB3_1_ALERT_ACTIVE) {
-        snprintf(line1, line1Size, "AlertA     D=%d", sample.angleDebounceCounter);
+        snprintf(line1, line1Size, "T:%d.%02dC  AlA", intPart, fracPart);
     } else {
-        snprintf(line1, line1Size, "OkA        D=%d", sample.angleDebounceCounter);
+        snprintf(line1, line1Size, "T:%d.%02dC  OkA", intPart, fracPart);
     }
 }
 
