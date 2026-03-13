@@ -1,3 +1,8 @@
+/**
+ * @file lab3_1App.cpp
+ * @brief Lab 3.1 application bootstrap.
+ */
+
 #include "lab3_1App.h"
 #include "lab3_1Shared.h"
 #include "lab3_1Acquisition.h"
@@ -6,6 +11,16 @@
 #include "../srvSerialStdio/srvSerialStdio.h"
 #include "../ddLcd/ddLcd.h"
 
+/**
+ * @brief Performs complete system startup for Lab 3.1.
+ *
+ * Startup sequence:
+ * 1) Serial setup and startup banner.
+ * 2) Shared synchronization objects creation.
+ * 3) Sensor/device initialization.
+ * 4) LCD initialization.
+ * 5) Task creation for acquisition, conditioning, alerting, and reporting.
+ */
 void lab3_1AppSetup() {
     srvSerialSetup(9600);
 
@@ -25,6 +40,7 @@ void lab3_1AppSetup() {
     ddLcdSetCursor(0, 0);
     ddLcdSetCursor(0, 1);
 
+    // Task creation status values are printed for quick startup diagnostics.
     BaseType_t rc1 = xTaskCreate(vTaskAngleAcquisition, "AngleAcq", 160, NULL, 1, NULL);
     BaseType_t rc2 = xTaskCreate(vTaskDisplay, "Report", 320, NULL, 1, NULL);
     BaseType_t rc3 = xTaskCreate(vTaskTempAcquisition, "TempAcq", 320, NULL, 1, NULL);
@@ -34,5 +50,8 @@ void lab3_1AppSetup() {
     printf("Task create status: A=%d D=%d T=%d C=%d L=%d\r\n", rc1, rc2, rc3, rc4, rc5);
 }
 
+/**
+ * @brief Empty loop for Arduino compatibility.
+ */
 void lab3_1AppLoop() {}
 

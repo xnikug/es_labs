@@ -1,10 +1,19 @@
+/**
+ * @file lab3_1Display.cpp
+ * @brief Periodic LCD and serial reporting for Lab 3.1.
+ */
+
 #include "lab3_1Display.h"
 #include "lab3_1Shared.h"
 #include "../ddLcd/ddLcd.h"
 #include <stdio.h>
 
+// Holds latest valid temperature so UI remains stable when sample invalidates.
 static float gLastValidTemperatureC = 0.0f;
 
+/**
+ * @brief Returns temperature for display using last-valid fallback.
+ */
 static float getDisplayTemperature(const SensorReadings_t &sample)
 {
     if (sample.temperatureValid) {
@@ -14,6 +23,9 @@ static float getDisplayTemperature(const SensorReadings_t &sample)
     return gLastValidTemperatureC;
 }
 
+/**
+ * @brief Formats both LCD lines from the latest shared snapshot.
+ */
 static void renderLcdLines(const SensorReadings_t &sample, char *line0, size_t line0Size, char *line1, size_t line1Size)
 {
     const float displayTempC = getDisplayTemperature(sample);
@@ -33,13 +45,23 @@ static void renderLcdLines(const SensorReadings_t &sample, char *line0, size_t l
     }
 }
 
+/**
+ * @brief Initializes LCD driver used by reporting task.
+ */
 void lab3_1DisplayInit() {
     ddLcdInit();
 }
 
+/**
+ * @brief Periodic reporting task.
+ *
+ * Reads shared snapshot, updates LCD rows, and emits a serial
+ * diagnostic line at each reporting period.
+ */
 void vTaskDisplay(void *pvParameters) {
     (void)pvParameters;
 
+    // Startup offset to allow acquisition/conditioning to populate values.
     vTaskDelay(pdMS_TO_TICKS(1000));
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xPeriod = pdMS_TO_TICKS(TASK_DISPLAY_PERIOD_MS);
@@ -59,6 +81,7 @@ void vTaskDisplay(void *pvParameters) {
         char line1[17];
         renderLcdLines(lSens, line0, sizeof(line0), line1, sizeof(line1));
 
+        // Render current snapshot on LCD.
         ddLcdClear();
         ddLcdSetCursor(0, 0);
         ddLcdPrint(line0);
@@ -73,6 +96,7 @@ void vTaskDisplay(void *pvParameters) {
                         tempFrac = -tempFrac;
                 }
 
+                // Mirror telemetry to serial for easier debugging and validation.
                 printf("Temp=%d.%02dC Angle=%d Off=%d Deb=%d Alert=%d Tv=%d\r\n",
                              tempInt,
                              tempFrac,
