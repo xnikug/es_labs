@@ -9,6 +9,8 @@
 #include "../edPotentiometer/edPotentiometer.h"
 #include <stdio.h>
 
+uint8_t gLab3_2ReportMode = 0;
+
 static void splitTemp(float valueC, int *intPart, int *fracPart)
 {
     *intPart = (int)valueC;
@@ -77,31 +79,23 @@ void vTask3_2Display(void *pvParameters)
                          LAB3_2_ANGLE_MIN_DEG,
                          LAB3_2_ANGLE_MAX_DEG);
 
-        snprintf(line0, sizeof(line0), "AR:%3d AF:%3d", angleRawDeg, angleFiltDeg);
-        snprintf(line1, sizeof(line1), "TR:%2d.%02d TF:%2d.%02d", tempRawI, tempRawF, tempFiltI, tempFiltF);
+        if (gLab3_2ReportMode == 0) {
+            snprintf(line0, sizeof(line0), "AR:%3d AF:%3d", angleRawDeg, angleFiltDeg);
+            snprintf(line1, sizeof(line1), "TR:%2d.%02d TF:%2d.%02d", tempRawI, tempRawF, tempFiltI, tempFiltF);
 
-        ddLcdClear();
-        ddLcdSetCursor(0, 0);
-        ddLcdPrint(line0);
-        ddLcdSetCursor(0, 1);
-        ddLcdPrint(line1);
-
-         printf("[L3.2] ADCraw=%d ADCsp=%d ADCw=%d U=%dmV Angle=%ddeg Cnt=%lu "
-             "Traw=%d.%02dC Tsat=%d.%02dC Tsp=%d.%02dC Tw=%d.%02dC Tcnt=%lu\r\n",
-               snapshot.rawAdc,
-               snapshot.adcAfterSaltPepper,
-               snapshot.adcAfterWeightedMean,
-               snapshot.voltageMv,
-               snapshot.angleDeg,
-             (unsigned long)snapshot.readingCount,
-             tempRawI,
-             tempRawF,
-             (int)snapshot.tempAfterSaturationC,
-             (int)((snapshot.tempAfterSaturationC - (int)snapshot.tempAfterSaturationC) * 100.0f),
-             (int)snapshot.tempAfterSaltPepperC,
-             (int)((snapshot.tempAfterSaltPepperC - (int)snapshot.tempAfterSaltPepperC) * 100.0f),
-             tempFiltI,
-             tempFiltF,
-             (unsigned long)snapshot.tempReadingCount);
+            ddLcdClear();
+            ddLcdSetCursor(0, 0);
+            ddLcdPrint(line0);
+            ddLcdSetCursor(0, 1);
+            ddLcdPrint(line1);
+        } else {
+            printf(">angle_raw:%d,angle_filt:%d,temp_raw:%d.%02d,temp_filt:%d.%02d\r\n",
+                   angleRawDeg,
+                   angleFiltDeg,
+                   tempRawI,
+                   tempRawF,
+                   tempFiltI,
+                   tempFiltF);
+        }
     }
 }

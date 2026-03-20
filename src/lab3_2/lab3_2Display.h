@@ -8,6 +8,8 @@
 
 #include <Arduino_FreeRTOS.h>
 
+extern uint8_t gLab3_2ReportMode;
+
 void lab3_2DisplayInit();
 void vTask3_2Display(void *pvParameters);
 
