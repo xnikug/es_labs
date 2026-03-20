@@ -6,6 +6,7 @@
 #include "lab3_2Display.h"
 #include "lab3_2Shared.h"
 #include "../ddLcd/ddLcd.h"
+#include "../edPotentiometer/edPotentiometer.h"
 #include <stdio.h>
 
 static void splitTemp(float valueC, int *intPart, int *fracPart)
@@ -16,6 +17,17 @@ static void splitTemp(float valueC, int *intPart, int *fracPart)
         frac = -frac;
     }
     *fracPart = frac;
+}
+
+static int saturateIntLocal(int value, int minValue, int maxValue)
+{
+    if (value < minValue) {
+        return minValue;
+    }
+    if (value > maxValue) {
+        return maxValue;
+    }
+    return value;
 }
 
 void lab3_2DisplayInit()
@@ -52,7 +64,20 @@ void vTask3_2Display(void *pvParameters)
         splitTemp(snapshot.rawTempC, &tempRawI, &tempRawF);
         splitTemp(snapshot.tempAfterWeightedMeanC, &tempFiltI, &tempFiltF);
 
-        snprintf(line0, sizeof(line0), "AR:%3d AF:%3d", snapshot.rawAdc, snapshot.adcAfterWeightedMean);
+        const int rawAdcSat = saturateIntLocal(snapshot.rawAdc, ED_POTENTIOMETER_ADC_MIN, ED_POTENTIOMETER_ADC_MAX);
+        const int filtAdcSat = saturateIntLocal(snapshot.adcAfterWeightedMean, ED_POTENTIOMETER_ADC_MIN, ED_POTENTIOMETER_ADC_MAX);
+        const int angleRawDeg = map(rawAdcSat,
+                        ED_POTENTIOMETER_ADC_MIN,
+                        ED_POTENTIOMETER_ADC_MAX,
+                        LAB3_2_ANGLE_MIN_DEG,
+                        LAB3_2_ANGLE_MAX_DEG);
+        const int angleFiltDeg = map(filtAdcSat,
+                         ED_POTENTIOMETER_ADC_MIN,
+                         ED_POTENTIOMETER_ADC_MAX,
+                         LAB3_2_ANGLE_MIN_DEG,
+                         LAB3_2_ANGLE_MAX_DEG);
+
+        snprintf(line0, sizeof(line0), "AR:%3d AF:%3d", angleRawDeg, angleFiltDeg);
         snprintf(line1, sizeof(line1), "TR:%2d.%02d TF:%2d.%02d", tempRawI, tempRawF, tempFiltI, tempFiltF);
 
         ddLcdClear();
