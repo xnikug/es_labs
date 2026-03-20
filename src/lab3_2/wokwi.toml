@@ -1,0 +1,11 @@
+[wokwi]
+version = 1
+firmware = '../../.pio/build/mega/firmware.hex'
+elf = '../../.pio/build/mega/firmware.elf'
+
+[mega]
+frequency = 16000000
+
+[[serial]]
+port = "/dev/ttyUSB0"
+baud = 9600
