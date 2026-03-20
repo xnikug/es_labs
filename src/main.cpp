@@ -11,7 +11,7 @@
 #define LAB_2_1 3
 #define LAB_2_2 4
 #define LAB_3_1 5
-#define APP_NAME LAB_3_1
+#define APP_NAME LAB_1_1
 
 void setup() {
   #if APP_NAME == LAB_1_1
