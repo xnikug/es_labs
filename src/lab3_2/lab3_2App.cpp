@@ -20,7 +20,7 @@ void lab3_2AppSetup()
     printf("========================================\r\n");
     printf("Sensors: potentiometer(A0) + DS18B20(D5)\r\n");
     printf("Pipeline: saturation + SaltPepper + WeightedMean\r\n");
-    printf("Angle: ADC->mV->deg(0..360), Temp: direct Celsius\r\n\r\n");
+    printf("Angle: ADC->mV->deg(0..270), Temp: direct Celsius\r\n\r\n");
 
     lab3_2SharedInit();
     lab3_2AcquisitionInit();
