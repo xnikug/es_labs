@@ -3,20 +3,52 @@
 #include "lab4_2Shared.h"
 #include "../srvSerialStdio/srvSerialStdio.h"
 
+#include <stdlib.h>
+#include <stdio.h>
+
+static bool lab4_2TryParseToken(const char *token, int *value)
+{
+    if (token == NULL || value == NULL) {
+        return false;
+    }
+
+    char *endPtr = NULL;
+    long parsed = strtol(token, &endPtr, 10);
+
+    if (endPtr == token) {
+        return false;
+    }
+
+    if (*endPtr != '\0') {
+        return false;
+    }
+
+    *value = (int)parsed;
+    return true;
+}
+
 void vTask4_2SerialInput(void *pvParameters)
 {
     (void)pvParameters;
 
     vTaskDelay(pdMS_TO_TICKS(2000));
 
+    char commandToken[24];
+
     for (;;) {
         int raw = gLab4_2LastSerialValue;
 
         if (srvSerialAvailable() > 0) {
-            int parsed = 0;
-            if (scanf("%d", &parsed) == 1) {
-                raw = parsed;
-                gLab4_2LastSerialValue = parsed;
+            int scanned = scanf("%23s", commandToken);
+            if (scanned == 1) {
+                int parsed = 0;
+                if (lab4_2TryParseToken(commandToken, &parsed)) {
+                    raw = parsed;
+                    gLab4_2LastSerialValue = parsed;
+                    printf("ACK|set_raw=%d\n", parsed);
+                } else {
+                    printf("ERR|cmd=invalid|expected=int[-100..100]\n");
+                }
             }
         }
 
