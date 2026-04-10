@@ -23,6 +23,10 @@ static bool lab4_2TryParseToken(const char *token, int *value)
         return false;
     }
 
+    if (parsed < LAB4_2_POWER_MIN || parsed > LAB4_2_POWER_MAX) {
+        return false;
+    }
+
     *value = (int)parsed;
     return true;
 }
@@ -47,7 +51,7 @@ void vTask4_2SerialInput(void *pvParameters)
                     gLab4_2LastSerialValue = parsed;
                     printf("ACK|set_raw=%d\n", parsed);
                 } else {
-                    printf("ERR|cmd=invalid|expected=int[-100..100]\n");
+                    printf("ERR|cmd=invalid_or_oob|expected=int[-100..100]\n");
                 }
             }
         }
