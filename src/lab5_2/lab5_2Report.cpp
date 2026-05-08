@@ -11,7 +11,7 @@ void vTask5_2Report(void *pvParameters)
 {
     (void)pvParameters;
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    uint8_t lcd_ready = 0U;
+    uint8_t lcdReady = 0U;
 
     static char t[6], sp[6];
     static char line1[17], line2[17];
@@ -19,29 +19,26 @@ void vTask5_2Report(void *pvParameters)
     for (;;) {
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(LAB5_2_TASK_REPORT_MS));
 
-        sensor_data_t   sensor;
-        control_state_t ctrl;
-        relay_state_t   relay;
-        app_shared_get_sensor(&sensor);
-        app_shared_get_control(&ctrl);
-        app_shared_get_relay(&relay);
+        SensorData_t   sensor;
+        ControlState_t ctrl;
+        RelayState_t   relay;
+        appSharedGetSensor(&sensor);
+        appSharedGetControl(&ctrl);
+        appSharedGetRelay(&relay);
 
-        dtostrf(ctrl.setpoint_c, 4, 1, sp);
+        dtostrf(ctrl.setpointC, 4, 1, sp);
         if (sensor.valid)
-            dtostrf(sensor.temperature_c, 4, 1, t);
+            dtostrf(sensor.temperatureC, 4, 1, t);
         else
             memcpy(t, "----", 5);
 
-        unsigned pct    = (unsigned)(ctrl.pid_output * 100.0f + 0.5f);
-        const char* fan = relay.is_on ? "ON" : "OFF";
+        unsigned pct    = (unsigned)(ctrl.pidOutput * 100.0f + 0.5f);
+        const char* fan = relay.isOn ? "ON" : "OFF";
 
         snprintf(line1, 17, "T:%s SP:%s", t, sp);
         snprintf(line2, 17, "PID:%3u%%  Fan:%s", pct, fan);
 
-        if (lcd_ready == 0U) {
-            ddLcdClear();
-            lcd_ready = 1U;
-        }
+        if (lcdReady == 0U) { ddLcdClear(); lcdReady = 1U; }
         ddLcdSetCursor(0, 0);
         ddLcdPrint(line1);
         ddLcdSetCursor(0, 1);

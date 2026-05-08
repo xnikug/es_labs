@@ -15,10 +15,10 @@ void vTask5_2Acquisition(void *pvParameters)
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
     for (;;) {
-        sensor_data_t data;
-        data.timestamp_ms = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
-        data.valid = dht22_read(&data.temperature_c, &data.humidity_pct);
-        app_shared_set_sensor(&data);
+        SensorData_t data;
+        data.timestampMs = (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS);
+        data.valid = dht22_read(&data.temperatureC, &data.humidityPct);
+        appSharedSetSensor(&data);
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(LAB5_2_TASK_ACQ_MS));
     }
 }

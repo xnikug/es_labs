@@ -2,5 +2,5 @@
 
 void lab5_1SharedInit(void)
 {
-    app_shared_init();
+    appSharedInit();
 }

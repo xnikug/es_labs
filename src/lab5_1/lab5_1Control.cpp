@@ -1,6 +1,6 @@
 #include "lab5_1Control.h"
 #include "lab5_1Shared.h"
-#include "../control/onoff_control.h"
+#include "../control/onoffControl.h"
 
 #include <Arduino_FreeRTOS.h>
 
@@ -10,19 +10,19 @@ void vTask5_1Control(void *pvParameters)
     TickType_t xLastWakeTime = xTaskGetTickCount();
 
     for (;;) {
-        sensor_data_t   sensor;
-        control_state_t ctrl;
-        app_shared_get_sensor(&sensor);
-        app_shared_get_control(&ctrl);
+        SensorData_t   sensor;
+        ControlState_t ctrl;
+        appSharedGetSensor(&sensor);
+        appSharedGetControl(&ctrl);
 
         if (sensor.valid) {
-            relay_cmd_t out = onoff_control_update(
-                sensor.temperature_c,
-                ctrl.setpoint_c,
-                ctrl.hysteresis_c,
-                ctrl.onoff_output);
-            if (out != ctrl.onoff_output)
-                app_shared_set_onoff_output(out,
+            RelayCmd_t out = onoffControlUpdate(
+                sensor.temperatureC,
+                ctrl.setpointC,
+                ctrl.hysteresisC,
+                ctrl.onoffOutput);
+            if (out != ctrl.onoffOutput)
+                appSharedSetOnoffOutput(out,
                     (uint32_t)(xTaskGetTickCount() * portTICK_PERIOD_MS));
         }
 
