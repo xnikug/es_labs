@@ -70,18 +70,25 @@ void vTask5_2Control(void *pvParameters)
                 appSharedSetSetpoint(sp);
             } else if (ch == 'p' || ch == 'P') {
                 s_idx = 0U; s_target = INPUT_KP;
+#if LAB5_2_OUTPUT_MODE == LAB5_2_MODE_MONITOR
                 printf("[IO] Enter Kp: ");
+#endif
             } else if (ch == 'i' || ch == 'I') {
                 s_idx = 0U; s_target = INPUT_KI;
+#if LAB5_2_OUTPUT_MODE == LAB5_2_MODE_MONITOR
                 printf("[IO] Enter Ki: ");
+#endif
             } else if (ch == 'k' || ch == 'K') {
                 s_idx = 0U; s_target = INPUT_KD;
+#if LAB5_2_OUTPUT_MODE == LAB5_2_MODE_MONITOR
                 printf("[IO] Enter Kd: ");
+#endif
             } else if (ch == 'D' || ch == 'd') {
                 s_idx = 0U;
                 appSharedToggleDisplay();
             } else if (ch == '?') {
                 s_idx = 0U;
+#if LAB5_2_OUTPUT_MODE == LAB5_2_MODE_MONITOR
                 ControlState_t ctrl; SensorData_t sensor;
                 RelayState_t relay; PidParams_t params;
                 appSharedGetControl(&ctrl); appSharedGetSensor(&sensor);
@@ -97,8 +104,10 @@ void vTask5_2Control(void *pvParameters)
                        sp, t, pidO,
                        relay.isOn ? "ON" : "OFF",
                        kp, ki, kd);
+#endif
             } else if (ch == '/') {
                 s_idx = 0U;
+#if LAB5_2_OUTPUT_MODE == LAB5_2_MODE_MONITOR
                 printf("--- Serial commands ---\n");
                 printf("  +/-        : raise/lower setpoint by 0.5C\n");
                 printf("  XX.X<Enter>: set setpoint directly (e.g. 26.5)\n");
@@ -108,6 +117,7 @@ void vTask5_2Control(void *pvParameters)
                 printf("  D          : toggle LCD on/off\n");
                 printf("  ?          : print current status\n");
                 printf("  /          : print this help\n");
+#endif
             } else if (ch == '\r' || ch == '\n') {
                 if (s_idx > 0U) {
                     s_buf[s_idx] = '\0'; s_idx = 0U;

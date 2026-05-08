@@ -81,8 +81,8 @@
  * Passive heater (5V/GND resistor, always on) drives temperature up.
  * Fan (relay-switched) cools it down.
  * ================================================================ */
-#define APP_SETPOINT_DEFAULT    25.0f   /* °C initial setpoint      */
-#define APP_HYSTERESIS_DEFAULT   1.0f   /* °C half-band (±1°C band) */
+#define APP_SETPOINT_DEFAULT    23.5f   /* °C initial setpoint      */
+#define APP_HYSTERESIS_DEFAULT   0.25f  /* °C half-band (±0.25°C)   */
 #define APP_SETPOINT_STEP        0.5f   /* °C per button/key press  */
 #define APP_HYSTERESIS_STEP      0.25f  /* °C per key press         */
 #define APP_SETPOINT_MIN        10.0f   /* °C lower clamp           */
@@ -117,6 +117,15 @@
 #define APP_STACK_IO            640U   /* serial printf + button poll    */
 #define APP_STACK_ACTUATOR      320U   /* relay drive                    */
 #define APP_STACK_DISPLAY       512U   /* snprintf x2 + ddLcd calls      */
+
+/* ================================================================
+ * Lab 5.2 Output Mode  (change only this one line to switch)
+ *   LAB5_2_MODE_MONITOR : human-readable serial (Serial Monitor) + LCD
+ *   LAB5_2_MODE_PLOTTER : CSV lines for Serial Plotter, no text output
+ * ================================================================ */
+#define LAB5_2_MODE_MONITOR  0
+#define LAB5_2_MODE_PLOTTER  1
+#define LAB5_2_OUTPUT_MODE   LAB5_2_MODE_PLOTTER
 
 /* ================================================================
  * Supported boards

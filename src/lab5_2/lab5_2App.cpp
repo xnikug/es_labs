@@ -29,6 +29,7 @@ void lab5_2AppSetup()
 
     lab5_2SharedInit();
 
+#if LAB5_2_OUTPUT_MODE == LAB5_2_MODE_MONITOR
     printf("\n=== LAB 5.2 PID THERMAL CONTROL ===\n");
     printf("DHT22=D%u  Relay=D%u  Btn+:D%u  Btn-:D%u\n",
            (unsigned)APP_DHT22_PIN, (unsigned)APP_RELAY_CONTROL_PIN,
@@ -43,6 +44,7 @@ void lab5_2AppSetup()
     printf("  ?          : print current status\n");
     printf("  /          : print this help\n");
     printf("---------------------------------------\n\n");
+#endif
 
     xTaskCreate(vTask5_2Acquisition, "L52Acq",  APP_STACK_SENSOR,   NULL, 2, NULL);
     xTaskCreate(vTask5_2Control,     "L52Ctrl", APP_STACK_IO,       NULL, 3, NULL);
