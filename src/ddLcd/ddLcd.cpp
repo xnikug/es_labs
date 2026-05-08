@@ -4,14 +4,12 @@
  */
 
 #include "ddLcd.h"
+#include "app_config.h"
 #include <LiquidCrystal_I2C.h>
+#include <Arduino.h>
 
-#define LCD_I2C_ADDRESS 0x27
-#define LCD_COLUMNS     16
-#define LCD_ROWS        2
-
-// SDA = pin 20, SCL = pin 21 on Arduino Mega.
-static LiquidCrystal_I2C lcd(LCD_I2C_ADDRESS, LCD_COLUMNS, LCD_ROWS);
+// SDA = pin 20, SCL = pin 21 on Arduino Mega. (hardware fixed)
+static LiquidCrystal_I2C lcd(APP_LCD_I2C_ADDR, APP_LCD_COLS, APP_LCD_ROWS);
 
 /* See ddLcd.h for documentation */
 void ddLcdInit()
