@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "author": "wokwi",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-arduino-mega",
+      "id": "mega",
+      "top": -200,
+      "left": -100,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-breadboard",
+      "id": "bb1",
+      "top": 200,
+      "left": -160,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledEG",
+      "top": 80,
+      "left": -200,
+      "attrs": { "color": "green" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledEY",
+      "top": 80,
+      "left": -130,
+      "attrs": { "color": "yellow" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledER",
+      "top": 80,
+      "left": -60,
+      "attrs": { "color": "red" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledNG",
+      "top": 80,
+      "left": 30,
+      "attrs": { "color": "green" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledNY",
+      "top": 80,
+      "left": 100,
+      "attrs": { "color": "yellow" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledNR",
+      "top": 80,
+      "left": 170,
+      "attrs": { "color": "red" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rEG",
+      "top": 220,
+      "left": -189,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rEY",
+      "top": 220,
+      "left": -119,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rER",
+      "top": 220,
+      "left": -49,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rNG",
+      "top": 220,
+      "left": 41,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rNY",
+      "top": 220,
+      "left": 111,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "rNR",
+      "top": 220,
+      "left": 181,
+      "rotate": 90,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btnNorth",
+      "top": 252,
+      "left": 280,
+      "attrs": { "color": "blue" }
+    }
+  ],
+  "connections": [
+    ["mega:GND.1",  "bb1:bn.1",   "black",  ["v20", "h-60"]],
+
+    ["mega:5",      "ledEG:A",    "green",  ["v40", "h-100"]],
+    ["ledEG:C",     "rEG:1",      "green",  []],
+    ["rEG:2",       "bb1:bn.3",   "black",  []],
+
+    ["mega:6",      "ledEY:A",    "orange", ["v50", "h-50"]],
+    ["ledEY:C",     "rEY:1",      "orange", []],
+    ["rEY:2",       "bb1:bn.8",   "black",  []],
+
+    ["mega:7",      "ledER:A",    "red",    ["v60", "h0"]],
+    ["ledER:C",     "rER:1",      "red",    []],
+    ["rER:2",       "bb1:bn.13",  "black",  []],
+
+    ["mega:8",      "ledNG:A",    "green",  ["v70", "h60"]],
+    ["ledNG:C",     "rNG:1",      "green",  []],
+    ["rNG:2",       "bb1:bn.18",  "black",  []],
+
+    ["mega:9",      "ledNY:A",    "orange", ["v80", "h120"]],
+    ["ledNY:C",     "rNY:1",      "orange", []],
+    ["rNY:2",       "bb1:bn.23",  "black",  []],
+
+    ["mega:10",     "ledNR:A",    "red",    ["v90", "h180"]],
+    ["ledNR:C",     "rNR:1",      "red",    []],
+    ["rNR:2",       "bb1:bn.28",  "black",  []],
+
+    ["mega:4",       "bb1:5.25",  "blue",   ["v100", "h200"]],
+    ["btnNorth:1.l", "bb1:5.25",  "blue",   []],
+    ["btnNorth:1.r", "bb1:5.27",  "blue",   []],
+    ["btnNorth:2.l", "bb1:6.25",  "black",  []],
+    ["btnNorth:2.r", "bb1:6.27",  "black",  []],
+    ["bb1:6.25",     "bb1:bn.25", "black",  []]
+  ],
+  "dependencies": {}
+}
