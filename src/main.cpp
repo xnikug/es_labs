@@ -9,19 +9,23 @@
 #include "lab4_2/lab4_2App.h"
 #include "lab5_1/lab5_1App.h"
 #include "lab5_2/lab5_2App.h"
+#include "lab6_1/lab6_1App.h"
+#include "lab6_2/lab6_2App.h"
 
 // Lab selection
-#define LAB_1_1 1
-#define LAB_1_2 2
-#define LAB_2_1 3
-#define LAB_2_2 4
-#define LAB_3_1 5
-#define LAB_3_2 6
-#define LAB_4_1 7
-#define LAB_4_2 8
-#define LAB_5_1 9
+#define LAB_1_1  1
+#define LAB_1_2  2
+#define LAB_2_1  3
+#define LAB_2_2  4
+#define LAB_3_1  5
+#define LAB_3_2  6
+#define LAB_4_1  7
+#define LAB_4_2  8
+#define LAB_5_1  9
 #define LAB_5_2 10
-#define APP_NAME LAB_5_2
+#define LAB_6_1 11
+#define LAB_6_2 12
+#define APP_NAME LAB_6_1
 
 void setup() {
   #if APP_NAME == LAB_1_1
@@ -44,6 +48,10 @@ void setup() {
     lab5_1AppSetup();
   #elif APP_NAME == LAB_5_2
     lab5_2AppSetup();
+  #elif APP_NAME == LAB_6_1
+    lab6_1AppSetup();
+  #elif APP_NAME == LAB_6_2
+    lab6_2AppSetup();
   #endif
 }
 
@@ -68,5 +76,9 @@ void loop() {
     lab5_1AppLoop();
   #elif APP_NAME == LAB_5_2
     lab5_2AppLoop();
+  #elif APP_NAME == LAB_6_1
+    lab6_1AppLoop();
+  #elif APP_NAME == LAB_6_2
+    lab6_2AppLoop();
   #endif
 }

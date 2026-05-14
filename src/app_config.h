@@ -128,6 +128,42 @@
 #define LAB5_2_OUTPUT_MODE   LAB5_2_MODE_PLOTTER
 
 /* ================================================================
+ * Lab 6.1: Button-LED Finite State Machine
+ * ================================================================ */
+#define APP_LAB6_1_BTN_PIN        4     /* D4  INPUT_PULLUP active-LOW */
+#define APP_LAB6_1_LED_PIN       13     /* D13 built-in LED            */
+#define APP_LAB6_1_DEBOUNCE_MS   50U
+#define APP_LAB6_1_FSM_PERIOD_MS 100U
+
+/* ================================================================
+ * Lab 6.2: Smart Traffic Light FSM
+ * ================================================================ */
+/* East-West direction LEDs */
+#define APP_LAB6_2_EAST_GREEN_PIN    5
+#define APP_LAB6_2_EAST_YELLOW_PIN   6
+#define APP_LAB6_2_EAST_RED_PIN      7
+/* North-South direction LEDs */
+#define APP_LAB6_2_NORTH_GREEN_PIN   8
+#define APP_LAB6_2_NORTH_YELLOW_PIN  9
+#define APP_LAB6_2_NORTH_RED_PIN    10
+/* North request button */
+#define APP_LAB6_2_REQ_BTN_PIN       4   /* INPUT_PULLUP active-LOW */
+/* Traffic-light state durations */
+#define APP_TL_YELLOW_MS          2000U  /* yellow phase    */
+#define APP_TL_ALL_RED_MS          500U  /* all-red safety  */
+#define APP_TL_NORTH_GREEN_MS     5000U  /* North green phase */
+/* Task stack sizes — smaller on Uno (2 KB SRAM) vs Mega (8 KB) */
+#if defined(__AVR_ATmega328P__)
+  #define APP_STACK_LAB6_2_TRAFFIC  128U
+  #define APP_STACK_LAB6_2_BUTTON    96U
+  #define APP_STACK_LAB6_2_REPORT   192U
+#else
+  #define APP_STACK_LAB6_2_TRAFFIC  384U
+  #define APP_STACK_LAB6_2_BUTTON   256U
+  #define APP_STACK_LAB6_2_REPORT   384U
+#endif
+
+/* ================================================================
  * Supported boards
  * ================================================================ */
 #if defined(__AVR_ATmega328P__)
