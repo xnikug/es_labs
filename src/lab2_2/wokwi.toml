@@ -1,7 +1,7 @@
 [wokwi]
 version = 1
-firmware = '../../.pio/build/mega/firmware.hex'
-elf = '../../.pio/build/mega/firmware.elf'
+firmware = '../../.pio/build/megaatmega2560/firmware.hex'
+elf = '../../.pio/build/megaatmega2560/firmware.elf'
 
 [mega]
 frequency = 16000000
